@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electric Load Forecasting</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .metrics-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .metrics-container h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .metrics-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .metrics-container th, 
+        .metrics-container td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .metrics-container th {
+            width: 30%;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Electric Load Forecasting</h1>
+            <p>Data Mining and Machine Learning Project</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="clustering">Clustering</button>
+            <button class="tab-btn" data-tab="forecasting">Forecasting</button>
+            <button class="tab-btn" data-tab="model-comparison">Model Comparison</button>
+            <button class="tab-btn" data-tab="help">Help</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Clustering Tab -->
+            <div id="clustering" class="tab-pane active">
+                <div class="control-panel">
+                    <h2>Cluster Analysis</h2>
+                    <p>Identify groups of similar consumption–weather patterns across cities and time periods.</p>
+                    
+                    <form id="cluster-form">
+                        <div class="form-group">
+                            <label for="k">Number of Clusters (k):</label>
+                            <input type="range" id="k" name="k" min="2" max="10" value="3" oninput="this.nextElementSibling.value = this.value">
+                            <output>3</output>
+                        </div>
+                        <button type="submit" class="btn">Generate Clusters</button>
+                    </form>
+                </div>
+                
+                <div class="results-panel">
+                    <div class="loading-spinner" id="cluster-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Generating clusters...</p>
+                    </div>
+                    <div id="cluster-results">
+                        <div class="placeholder">
+                            <p>Adjust the number of clusters and click "Generate Clusters" to see the results.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecasting Tab -->
+            <div id="forecasting" class="tab-pane">
+                <div class="control-panel">
+                    <h2>Demand Forecasting</h2>
+                    <p>Forecast electricity demand using SARIMA model.</p>
+                    
+                    <form id="forecast-form">
+                        <div class="form-group">
+                            <label for="city">City:</label>
+                            <select id="city" name="city" required>
+                                {% for city in cities %}
+                                <option value="{{ city }}">{{ city|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="start-date">Start Date:</label>
+                            <input type="date" id="start-date" name="start_date" value="{{ min_date }}" min="{{ min_date }}" max="{{ max_date }}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="end-date">End Date:</label>
+                            <input type="date" id="end-date" name="end_date" value="{{ max_date }}" min="{{ min_date }}" max="{{ max_date }}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Model Type:</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="model_type" value="sarima" checked>
+                                    SARIMA
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn">Generate Forecast</button>
+                    </form>
+                </div>
+                
+                <div class="results-panel">
+                    <div class="loading-spinner" id="forecast-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Generating forecast...</p>
+                    </div>
+                    <div id="forecast-results">
+                        <div class="placeholder">
+                            <p>Select a city and date range to generate a forecast.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Comparison Tab -->
+            <div id="model-comparison" class="tab-pane">
+                <div class="control-panel">
+                    <h2>Model Comparison</h2>
+                    <p>Compare different models' performance on the entire dataset.</p>
+                    
+                    <form id="comparison-form">
+                        <div class="form-group">
+                            <label>Model Type:</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="model_type" value="linear" checked>
+                                    Linear Regression
+                                </label>
+                                <label>
+                                    <input type="radio" name="model_type" value="xgboost">
+                                    XGBoost
+                                </label>
+                                <label>
+                                    <input type="radio" name="model_type" value="lstm">
+                                    LSTM
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn">Compare Model</button>
+                    </form>
+                </div>
+                
+                <div class="results-panel">
+                    <div class="loading-spinner" id="comparison-loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Generating comparison...</p>
+                    </div>
+                    <div id="comparison-results">
+                        <div class="placeholder">
+                            <p>Select a model type to see actual vs predicted values across the entire dataset.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Tab -->
+            <div id="help" class="tab-pane">
+                <div class="help-content">
+                    <h2>Help & Documentation</h2>
+                    
+                    <div class="help-section">
+                        <h3>Clustering Analysis</h3>
+                        <p>The clustering analysis identifies groups of similar consumption and weather patterns across cities and time periods.</p>
+                        <ul>
+                            <li><strong>Number of Clusters (k):</strong> Adjust the slider to change the number of clusters. The optimal value is typically between 3-5.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h3>Demand Forecasting</h3>
+                        <p>The forecasting model predicts electricity demand based on historical data and weather patterns.</p>
+                        <ul>
+                            <li><strong>City:</strong> Select one of the ten major U.S. cities in the dataset.</li>
+                            <li><strong>Date Range:</strong> Select the start and end dates for the forecast period.</li>
+                            <li><strong>Model Type:</strong> The application uses SARIMA (Seasonal AutoRegressive Integrated Moving Average) - best for capturing seasonal patterns.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h3>Model Comparison</h3>
+                        <p>The model comparison tab allows you to evaluate different machine learning models on the entire dataset.</p>
+                        <ul>
+                            <li><strong>Model Type:</strong> Choose from Linear Regression, XGBoost, or LSTM models.</li>
+                            <li><strong>Sample Size:</strong> Adjust the number of data points to include in the visualization. Larger samples show more data but may slow down rendering.</li>
+                            <li><strong>Metrics:</strong> The comparison includes Mean Squared Error (MSE), Root Mean Squared Error (RMSE), and Mean Absolute Error (MAE) to evaluate model performance.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="help-section">
+                        <h3>Technical Details</h3>
+                        <p>This application uses several machine learning algorithms to analyze and forecast electricity demand:</p>
+                        <ul>
+                            <li><strong>K-Means Clustering:</strong> Segments data points into clusters based on weather and consumption patterns.</li>
+                            <li><strong>PCA:</strong> Principal Component Analysis is used to visualize high-dimensional data in 2D space.</li>
+                            <li><strong>SARIMA:</strong> Time series forecasting model that accounts for seasonality.</li>
+                            <li><strong>Linear Regression:</strong> Predicts demand as a linear function of input features.</li>
+                            <li><strong>XGBoost:</strong> Gradient boosting framework that uses ensemble learning for improved accuracy.</li>
+                            <li><strong>LSTM:</strong> Long Short-Term Memory neural network that excels at learning patterns in sequential data.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Electric Load Forecasting - Data Mining Project</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all buttons and panes
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    
+                    // Add active class to current button and pane
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Clustering form submission
+            const clusterForm = document.getElementById('cluster-form');
+            const clusterResults = document.getElementById('cluster-results');
+            const clusterLoading = document.getElementById('cluster-loading');
+            
+            clusterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading spinner
+                clusterLoading.style.display = 'flex';
+                clusterResults.innerHTML = '';
+                
+                const formData = new FormData(clusterForm);
+                
+                fetch('/cluster', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading spinner
+                    clusterLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        clusterResults.innerHTML = `<div class="error">${data.error}</div>`;
+                    } else {
+                        clusterResults.innerHTML = `
+                            <div class="result-image">
+                                <img src="data:image/png;base64,${data.image}" alt="Cluster Visualization">
+                            </div>
+                            <div class="result-description">
+                                <h3>Cluster Analysis Results</h3>
+                                <p>The visualization shows the data points projected onto the first two principal components, colored by cluster assignment.</p>
+                                <p>Each cluster represents a group of similar consumption and weather patterns.</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    clusterLoading.style.display = 'none';
+                    clusterResults.innerHTML = `<div class="error">An error occurred: ${error.message}</div>`;
+                    console.error('Error:', error);
+                });
+            });
+            
+            // Forecasting form submission
+            const forecastForm = document.getElementById('forecast-form');
+            const forecastResults = document.getElementById('forecast-results');
+            const forecastLoading = document.getElementById('forecast-loading');
+            
+            forecastForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading spinner
+                forecastLoading.style.display = 'flex';
+                forecastResults.innerHTML = '';
+                
+                const formData = new FormData(forecastForm);
+                
+                fetch('/forecast', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading spinner
+                    forecastLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        forecastResults.innerHTML = `<div class="error">${data.error}</div>`;
+                        console.error('Error from server:', data.error);
+                    } else {
+                        const city = document.getElementById('city').value;
+                        forecastResults.innerHTML = `
+                            <div class="result-image">
+                                <img src="data:image/png;base64,${data.image}" alt="Forecast Visualization">
+                            </div>
+                            <div class="result-description">
+                                <h3>${data.model_name} Forecast Results for ${city}</h3>
+                                <p>The chart shows the actual electricity demand and the forecasted values for the selected period.</p>
+                                <p>The shaded area represents the 95% confidence interval.</p>
+                                <div class="metrics-container">
+                                    <h4>Model Performance Metrics:</h4>
+                                    <table>
+                                        <tr><th>MAE</th><td>${data.metrics.mae}</td></tr>
+                                        <tr><th>RMSE</th><td>${data.metrics.rmse}</td></tr>
+                                        <tr><th>R²</th><td>${data.metrics.r2}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    forecastLoading.style.display = 'none';
+                    forecastResults.innerHTML = `<div class="error">An error occurred: ${error.message}</div>`;
+                    console.error('Error:', error);
+                });
+            });
+            
+            // Model Comparison form submission
+            const comparisonForm = document.getElementById('comparison-form');
+            const comparisonResults = document.getElementById('comparison-results');
+            const comparisonLoading = document.getElementById('comparison-loading');
+            
+            comparisonForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Show loading spinner
+                comparisonLoading.style.display = 'flex';
+                comparisonResults.innerHTML = '';
+                
+                const formData = new FormData(comparisonForm);
+                
+                fetch('/compare_models', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading spinner
+                    comparisonLoading.style.display = 'none';
+                    
+                    if (data.error) {
+                        comparisonResults.innerHTML = `<div class="error">${data.error}</div>`;
+                        console.error('Error from server:', data.error);
+                    } else {
+                        comparisonResults.innerHTML = `
+                            <div class="result-image">
+                                <img src="data:image/png;base64,${data.image}" alt="Model Comparison Visualization">
+                            </div>
+                            <div class="result-description">
+                                <h3>${data.model_name} Model Evaluation</h3>
+                                <p>The chart shows the actual electricity demand values compared to the predicted values across the dataset.</p>
+                                <div class="metrics-container">
+                                    <h4>Model Performance Metrics:</h4>
+                                    <table>
+                                        <tr><th>MAE</th><td>${data.metrics.mae}</td></tr>
+                                        <tr><th>RMSE</th><td>${data.metrics.rmse}</td></tr>
+                                        <tr><th>R²</th><td>${data.metrics.r2}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    comparisonLoading.style.display = 'none';
+                    comparisonResults.innerHTML = `<div class="error">An error occurred: ${error.message}</div>`;
+                    console.error('Error:', error);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
